@@ -13,16 +13,12 @@ class WebScraper:
         self.db_handler = MongoDBHandler(self.website_name)
         self.sitemap_scraper = SitemapScraper(self.domain)
         self.link_crawler = InternalLinkCrawler(self.domain)
+        self.scraped_urls = []
 
     def get_website_name(self):
         """Extracts the name of the website from the domain and formats it."""
-        try:
-            response = requests.get(self.domain, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
-            soup = BeautifulSoup(response.text, "html.parser")
-            return soup.title.string.strip().replace(" ", "_")
-        except Exception as e:
-            print(f"⚠️ Error fetching website name: {e}")
-            return "unknown_website"
+        #exclude https and .com or anything after . for getting the name 
+        return self.domain.replace("https://", "").replace("http://", "").split(".")[0]
 
     def remove_trailing_slash(self, url):
         """Removes the trailing slash from a URL."""
@@ -42,5 +38,6 @@ class WebScraper:
 
         # Combine & store unique URLs
         all_urls = list(set(sitemap_urls + crawled_urls))
+        self.scraped_urls = all_urls
         self.db_handler.save_urls(all_urls)
         print("🎯 URL Extraction Completed!")
