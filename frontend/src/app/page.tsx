@@ -30,10 +30,14 @@ export default function Home() {
         const res = await axios.get(`${BASE_URL}/scraped-urls/`, { params: { domain } });
         setUrls(res.data.scraped_urls || []);
       }, 5000);
-    } catch (error: any) {
-      console.error("❌ Scraper Error:", error.response?.data || error.message);
+    }catch (error) {
+      if (axios.isAxiosError(error)) {
+          console.error("❌ Scraper Error:", error.response?.data || error.message);
+      } else {
+          console.error("❌ Scraper Error:", error);
+      }
       setError("Failed to scrape the website. Please try again.");
-    } finally {
+    }finally {
       setLoading(false);
     }
   };
