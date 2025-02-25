@@ -10,11 +10,12 @@ export default function Home() {
   const [urls, setUrls] = useState<string[]>([]);
   const [error, setError] = useState("");
 
-  const BASE_URL = "http://127.0.0.1:8000"; // Change this if your API is deployed
+  // ✅ Use environment variable for API URL
+  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   const handleScrape = async () => {
     if (!domain.trim()) return;
-    
+
     setLoading(true);
     setError("");
     setUrls([]);
@@ -29,7 +30,8 @@ export default function Home() {
         const res = await axios.get(`${BASE_URL}/scraped-urls/`, { params: { domain } });
         setUrls(res.data.scraped_urls || []);
       }, 5000);
-    } catch (err) {
+    } catch (error: any) {
+      console.error("❌ Scraper Error:", error.response?.data || error.message);
       setError("Failed to scrape the website. Please try again.");
     } finally {
       setLoading(false);
@@ -38,7 +40,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white px-4">
-      <motion.h1 
+      <motion.h1
         className="text-4xl font-bold mb-6"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -67,7 +69,7 @@ export default function Home() {
       {error && <p className="text-red-500 mt-4">{error}</p>}
 
       {loading && (
-        <motion.div 
+        <motion.div
           className="mt-6 text-lg"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -78,7 +80,7 @@ export default function Home() {
       )}
 
       {!loading && urls.length > 0 && (
-        <motion.div 
+        <motion.div
           className="mt-6 w-full max-w-lg"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
