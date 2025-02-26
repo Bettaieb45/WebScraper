@@ -14,7 +14,6 @@ class InternalLinkCrawler:
         """Crawls internal links from a website."""
         visited = set()
         queue = [self.domain]
-
         def fetch_page(url):
             """Fetches and extracts internal links from a single page."""
             if url in visited or "#" in url:
@@ -31,7 +30,6 @@ class InternalLinkCrawler:
                 for link in soup.find_all("a", href=True):
                     new_url = urljoin(url, link["href"])
                     parsed_url = urlparse(new_url)
-
                     if parsed_url.netloc == urlparse(self.domain).netloc and new_url not in visited:
                         new_links.append(new_url)
 
