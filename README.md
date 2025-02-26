@@ -20,53 +20,7 @@ With its modular architecture, WebScraper provides:
 
 ---
 
-### **📂 Project Structure**  
-```bash
-WebScraper/
-│── scraper/
-│   ├── MongoDBHandler.py       # Handles database storage in MongoDB
-│   ├── SitemapScraper.py       # Extracts URLs from the sitemap.xml
-│   ├── InternalLinkCrawler.py  # Crawls internal links for additional URLs
-│── WebScraper.py               # Coordinates the entire scraping process
-│── requirements.txt            # Required Python dependencies
-│── README.md                   # You’re reading it now 😉
-```
 
----
-
-### **📦 Installation**  
-Before running the scraper, make sure you have **Python 3.8+** installed.  
-
-#### **1️⃣ Clone the Repository**  
-```bash
-git clone https://github.com/yourusername/WebScraper.git
-cd WebScraper
-```
-
-#### **2️⃣ Set Up a Virtual Environment (Optional but Recommended)**
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-#### **3️⃣ Install Dependencies**  
-```bash
-pip install -r requirements.txt
-```
-
-#### **4️⃣ Start Your MongoDB Server**  
-Ensure that **MongoDB** is running before executing the scraper. You can start it using:  
-```bash
-mongod --dbpath /your/db/path
-```
-
----
-
-### **🚀 Usage**  
-Running the scraper is simple. Just provide the website's domain:  
-```bash
-python WebScraper.py https://example.com
-```
 
 #### **🎯 What Happens?**
 1️⃣ It **extracts URLs** from the sitemap  
@@ -84,7 +38,7 @@ python WebScraper.py https://example.com
 
 ---
 
-### **🛠 Configuration**  
+
 Modify the `WebScraper` parameters inside `WebScraper.py` to **adjust settings**:  
 ```python
 scraper = WebScraper(
