@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from scraper.MongoDBHandler import MongoDBHandler
 from scraper.SitemapScraper import SitemapScraper
 from scraper.InternalLinkCrawler import InternalLinkCrawler
-
+import csv
 class WebScraper:
     """Coordinates the entire scraping process."""
 
@@ -51,3 +51,10 @@ class WebScraper:
         self.db_handler.save_urls(all_urls)
 
         print("🎯 URL Extraction Completed!")
+    def save_urls_to_csv( self,filename="scraped_urls.csv"):
+        with open(filename, mode='w', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow(["Scraped URLs"])  # Header
+            for url in self.scraped_urls:
+                writer.writerow([url])
+        return filename  # Return filename for download handling

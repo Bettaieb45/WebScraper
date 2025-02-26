@@ -4,7 +4,7 @@ import { useState } from "react";
 import axios from "axios";
 
 interface ScraperFormProps {
-  onScrapeComplete: (urls: string[]) => void;
+  onScrapeComplete: (urls: string[], domain: string) => void;
   onLoadingChange: (loading: boolean) => void;
 }
 
@@ -18,7 +18,7 @@ export default function ScraperForm({ onScrapeComplete, onLoadingChange }: Scrap
     if (!domain.trim()) return;
 
     setError("");
-    onScrapeComplete([]); // Reset previous results
+    onScrapeComplete([], ""); // Reset previous results
     onLoadingChange(true); // Start loading state
 
     try {
@@ -26,7 +26,9 @@ export default function ScraperForm({ onScrapeComplete, onLoadingChange }: Scrap
 
       setTimeout(async () => {
         const res = await axios.get(`${BASE_URL}/scraped-urls/`, { params: { domain } });
-        onScrapeComplete(res.data.scraped_urls || []);
+        const urls = res.data.scraped_urls || [];
+
+        onScrapeComplete(urls, domain); // ✅ Pass domain along with URLs
       }, 5000);
     } catch (error) {
       console.error("❌ Scraper Error:", axios.isAxiosError(error) ? error.response?.data || error.message : error);

@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from scraper.WebScraper import WebScraper  # Import your WebScraper class
 from fastapi.middleware.cors import CORSMiddleware
 
+import io
+import csv
+from fastapi.responses import Response
 class WebScraperAPI:
     """A class-based FastAPI app that manages the web scraping process."""
 
@@ -49,7 +52,30 @@ class WebScraperAPI:
             scraper = self.scrapers[domain]
             urls = scraper.scraped_urls
             return {"scraped_urls": urls}
+        @self.app.get("/download-csv/")
+        def download_csv(domain: str):
+            """Returns scraped URLs as a downloadable CSV file."""
+            if domain not in self.scrapers:
+                return {"error": "Domain not found. Run /scrape/ first."}
 
+            scraper = self.scrapers[domain]
+            urls = scraper.scraped_urls
+
+            if not urls:
+                return {"error": "No scraped URLs available for this domain."}
+
+            # Create CSV in memory
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Scraped URLs"])  # Header row
+            for url in urls:
+                writer.writerow([url])
+
+            # Prepare response
+            response = Response(content=output.getvalue(), media_type="text/csv")
+            response.headers["Content-Disposition"] = f"attachment; filename={domain}_scraped_urls.csv"
+            return response
+        
     def get_app(self):
         """Returns the FastAPI instance."""
         return self.app

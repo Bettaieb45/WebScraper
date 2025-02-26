@@ -32,4 +32,6 @@ class MongoDBHandler:
         if operations:
             result = self.collection.bulk_write(operations)
             print(f"✅ {result.upserted_count} new URLs stored in MongoDB!")
+   
 
+    
