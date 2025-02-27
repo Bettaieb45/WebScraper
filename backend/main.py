@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from scraper.WebScraper import WebScraper  # Import your WebScraper class
+from scraper.WebScraper import WebScraper 
 from fastapi.middleware.cors import CORSMiddleware
-
+from scraper.ContentScraper import ContentScraper
 import io
 import csv
 from fastapi.responses import Response
@@ -11,6 +11,7 @@ class WebScraperAPI:
     def __init__(self):
         self.app = FastAPI(title="Web Scraper API", version="1.0")
         self.scrapers = {}  # Dictionary to store WebScraper instances
+        self.content_scrapers = {}  # Dictionary to store ContentScraper instances
         self.app.add_middleware(  # Add CORS middleware
             CORSMiddleware,
             allow_origins=["*"],
@@ -37,7 +38,15 @@ class WebScraperAPI:
             scraper = self.scrapers[domain]
             scraper.process_website()
             return {"message": f"Scraping started for {domain}"}
-
+        
+        @self.app.post("/scrape-content/")
+        def scrape_content(domain: str):
+            """Creates a ContentScraper instance and stores it."""
+            if domain not in self.content_scrapers:
+                self.content_scrapers[domain] = ContentScraper(domain)
+            content_scraper = self.content_scrapers[domain]
+            content_scraper.process_indexed_pages()
+            
         @self.app.get("/website-name/")
         def get_website_name(domain: str):
             """Fetches the website name using WebScraper."""
@@ -46,35 +55,23 @@ class WebScraperAPI:
         @self.app.get("/scraped-urls/")
         def get_scraped_urls(domain: str):
             """Retrieves scraped URLs from MongoDB."""
-            if domain not in self.scrapers:
+            if domain not in self.content_scrapers:
                 return {"error": "Domain not found. Run /scrape/ first."}
             
-            scraper = self.scrapers[domain]
-            urls = scraper.scraped_urls
+            content_scraper = self.content_scrapers[domain]
+            urls = content_scraper.db_handler.fetch_scraped_urls()
             return {"scraped_urls": urls}
         @self.app.get("/download-csv/")
         def download_csv(domain: str):
-            """Returns scraped URLs as a downloadable CSV file."""
-            if domain not in self.scrapers:
+            """Dynamically generates and returns extracted data CSV."""
+            if domain not in self.content_scrapers:
                 return {"error": "Domain not found. Run /scrape/ first."}
-
-            scraper = self.scrapers[domain]
-            urls = scraper.scraped_urls
-
-            if not urls:
-                return {"error": "No scraped URLs available for this domain."}
-
-            # Create CSV in memory
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(["Scraped URLs"])  # Header row
-            for url in urls:
-                writer.writerow([url])
-
-            # Prepare response
-            response = Response(content=output.getvalue(), media_type="text/csv")
-            response.headers["Content-Disposition"] = f"attachment; filename={domain}_scraped_urls.csv"
+            content_scraper = self.content_scrapers[domain]
+            csv_content = content_scraper.generate_extracted_data_csv()
+            response = Response(content=csv_content,media_type="text/csv")
+            response.headers["Content-Disposition"] = f"attachment; filename={domain}_extracted_data.csv"
             return response
+            
         
     def get_app(self):
         """Returns the FastAPI instance."""

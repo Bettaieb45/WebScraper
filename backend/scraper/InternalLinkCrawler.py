@@ -40,7 +40,7 @@ class InternalLinkCrawler:
         visited.add(url)
 
         try:
-            response = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            response = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
             if response.status_code != 200:
                 print(f"⚠️ Skipping {url} - Status Code: {response.status_code}")
                 return []

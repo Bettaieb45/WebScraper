@@ -1,6 +1,5 @@
-from scraper.WebScraper import WebScraper  
+from scraper.ContentScraper import ContentScraper  
 
-scraper = WebScraper("https://aziz-portfolio.com/")
-scraper.process_website()
-scraper.save_urls_to_csv("scraped_urls.csv")
-print(scraper.scraped_urls)
+scraper = ContentScraper("https://caffia.com")
+scraper.process_indexed_pages()
+print(scraper.generate_extracted_data_csv())
