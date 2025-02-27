@@ -5,9 +5,9 @@ import { useState } from "react";
 const DownloadCSVButton = ({ domain }: { domain: string }) => {
   const [loading, setLoading] = useState(false);
   const [csvReady, setCsvReady] = useState(false);
+  const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   const checkCsvAvailability = async () => {
-    const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
     try {
       setLoading(true);
@@ -26,7 +26,7 @@ const DownloadCSVButton = ({ domain }: { domain: string }) => {
 
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8000/download-csv/?domain=${domain}`);
+      const response = await fetch(`${BASE_URL}/download-csv/?domain=${domain}`);
       if (!response.ok) throw new Error("Failed to download CSV");
 
       const blob = await response.blob();
