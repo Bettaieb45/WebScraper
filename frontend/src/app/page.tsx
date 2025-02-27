@@ -5,10 +5,19 @@ import Header from "./components/Header";
 import ScraperForm from "./components/ScraperForm";
 import ScrapedUrls from "./components/ScrapedUrls";
 import LoadingIndicator from "./components/LoadingIndicator";
-import DownloadCSVButton from "./components/DownloadCSVButton"; // Import the button
+import DownloadCSVButton from "./components/DownloadCSVButton";
+
+// Define the type for the scraped URLs dictionary
+interface ScrapedUrlData {
+  status: string;
+  meta_title?: string;
+  meta_description?: string;
+  heading_count?: number;
+}
 
 export default function Home() {
-  const [urls, setUrls] = useState<string[]>([]);
+  // ✅ Ensure `urls` is stored as a dictionary (Record<string, ScrapedUrlData>)
+  const [urls, setUrls] = useState<Record<string, ScrapedUrlData>>({});
   const [loading, setLoading] = useState(false);
   const [domain, setDomain] = useState<string>("");
 
@@ -17,16 +26,16 @@ export default function Home() {
       <Header />
       <ScraperForm 
         onScrapeComplete={(scrapedUrls, scrapedDomain) => {
-          setUrls(scrapedUrls);
+          setUrls(scrapedUrls); // ✅ Store dictionary, not array
           setDomain(scrapedDomain); // ✅ Store the domain for CSV download
         }} 
         onLoadingChange={setLoading} 
       />
-      {/* ✅ Show download button only when URLs are available */}
-      {urls.length > 0 && domain && <DownloadCSVButton domain={domain} />}
-      {loading ? <LoadingIndicator /> : <ScrapedUrls urls={urls} />}
       
-    
+      {/* ✅ Show download button only when URLs are available */}
+      {Object.keys(urls).length > 0 && domain && <DownloadCSVButton domain={domain} />}
+      
+      {loading ? <LoadingIndicator /> : <ScrapedUrls urls={urls} />}
     </main>
   );
 }

@@ -8,14 +8,16 @@ const DownloadCSVButton = ({ domain }: { domain: string }) => {
   const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
   const checkCsvAvailability = async () => {
-
     try {
       setLoading(true);
       const response = await fetch(`${BASE_URL}/scraped-urls/?domain=${domain}`);
       const data = await response.json();
-      setCsvReady(data.scraped_urls && data.scraped_urls.length > 0);
+
+      // ✅ Check if data.scraped_urls is a non-empty object instead of an array
+      setCsvReady(data.scraped_urls && Object.keys(data.scraped_urls).length > 0);
     } catch (error) {
       console.error("Error checking CSV availability:", error);
+      setCsvReady(false);
     } finally {
       setLoading(false);
     }
@@ -47,23 +49,25 @@ const DownloadCSVButton = ({ domain }: { domain: string }) => {
 
   return (
     <div className="flex flex-col items-center gap-4">
+      {/* Check CSV Availability Button */}
       <button
         onClick={checkCsvAvailability}
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
         disabled={loading}
       >
         {loading ? "Checking CSV..." : "Check CSV Availability"}
       </button>
 
-      <button
-        onClick={downloadCSV}
-        className={`px-4 py-2 rounded-lg ${
-          csvReady ? "bg-green-500 hover:bg-green-600" : "bg-gray-400 cursor-not-allowed"
-        } text-white`}
-        disabled={!csvReady || loading}
-      >
-        {loading ? "Downloading..." : "Download CSV"}
-      </button>
+      {/* Download CSV Button */}
+      {csvReady && (
+        <button
+          onClick={downloadCSV}
+          className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"
+          disabled={loading}
+        >
+          {loading ? "Downloading..." : "Download CSV"}
+        </button>
+      )}
     </div>
   );
 };
