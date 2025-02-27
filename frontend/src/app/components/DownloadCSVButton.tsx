@@ -7,9 +7,11 @@ const DownloadCSVButton = ({ domain }: { domain: string }) => {
   const [csvReady, setCsvReady] = useState(false);
 
   const checkCsvAvailability = async () => {
+    const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:8000/scraped-urls/?domain=${domain}`);
+      const response = await fetch(`${BASE_URL}/scraped-urls/?domain=${domain}`);
       const data = await response.json();
       setCsvReady(data.scraped_urls && data.scraped_urls.length > 0);
     } catch (error) {
