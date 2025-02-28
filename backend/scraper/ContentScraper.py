@@ -46,8 +46,8 @@ class ContentScraper:
                     if not browserless_url or not browserless_token:
                         raise ValueError("Browserless credentials are missing. Please check environment variables.")
 
-                    # ✅ Correctly format the remote WebDriver URL
-                    remote_url = f"{browserless_url}/?token={browserless_token}"
+                    # ✅ Use HTTPS instead of WSS
+                    remote_url = f"{browserless_url}/webdriver?token={browserless_token}"
 
                     self._selenium_driver = webdriver.Remote(
                         command_executor=remote_url,
