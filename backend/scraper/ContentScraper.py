@@ -38,10 +38,6 @@ class ContentScraper:
                     options.add_argument("--no-sandbox")
                     options.add_argument("--disable-dev-shm-usage")
                     options.add_argument("--blink-settings=imagesEnabled=false")  # ✅ Disable images for faster rendering
-                    #self._selenium_driver = webdriver.Chrome(service=Service('/usr/local/bin/chromedriver'),options=options)
-
-                    #self._selenium_driver.set_page_load_timeout(10)  # ✅ Speed up by limiting page load time
-                                 # ✅ Use auto-installed ChromeDriver
                     self._selenium_driver = webdriver.Chrome(options=options)
                     self._selenium_driver.set_page_load_timeout(10)
         return self._selenium_driver
