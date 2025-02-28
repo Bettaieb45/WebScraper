@@ -38,8 +38,16 @@ class ContentScraper:
                     options.add_argument("--no-sandbox")
                     options.add_argument("--disable-dev-shm-usage")
                     options.add_argument("--blink-settings=imagesEnabled=false")  # ✅ Disable images for faster rendering
-                    self._selenium_driver = webdriver.Chrome(options=options)
-                    self._selenium_driver.set_page_load_timeout(10)
+                    
+                    # ✅ Set Browserless authentication token
+                    browserless_url = os.environ.get("BROWSER_WEBDRIVER_ENDPOINT")
+                    browserless_token = os.environ.get("BROWSER_TOKEN")
+                    remote_url = f"{browserless_url}/?token={browserless_token}"
+
+                    self._selenium_driver = webdriver.Remote(
+                        command_executor=remote_url,
+                        options=options
+                    )
         return self._selenium_driver
 
     def fetch_page_data(self, url):
