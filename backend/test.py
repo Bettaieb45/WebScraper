@@ -1,5 +1,5 @@
 from scraper.ContentScraper import ContentScraper  
 
-scraper = ContentScraper("https://caffia.com")
+scraper = ContentScraper("https://aloa.co")
 scraper.process_indexed_pages()
-print(scraper.generate_extracted_data_csv())
+

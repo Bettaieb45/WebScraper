@@ -5,7 +5,13 @@ from bs4 import BeautifulSoup
 import requests
 import csv
 import io
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+import threading
 
 class ContentScraper:
     def __init__(self, domain, db_handler=None):
@@ -14,48 +20,89 @@ class ContentScraper:
         self.db_handler = db_handler or MongoDBHandler(self.website_name)
         self.scraped_urls = self.db_handler.fetch_scraped_urls()
         self.extracted_data = {}
+        self.session = requests.Session()  # ✅ Reuse HTTP connections for faster requests
+        self.session.headers.update({"User-Agent": "Mozilla/5.0"})
+
+        # ✅ Lazy initialize Selenium (only when needed)
+        self.driver_lock = threading.Lock()
+        self._selenium_driver = None  
+
+    def _get_selenium_driver(self):
+        """Lazy initialization of Selenium WebDriver."""
+        if self._selenium_driver is None:
+            with self.driver_lock:  # Ensures only one instance is created
+                if self._selenium_driver is None:
+                    options = Options()
+                    options.add_argument("--headless")
+                    options.add_argument("--disable-gpu")
+                    options.add_argument("--no-sandbox")
+                    options.add_argument("--disable-dev-shm-usage")
+                    options.add_argument("--blink-settings=imagesEnabled=false")  # ✅ Disable images for faster rendering
+                    self._selenium_driver = webdriver.Chrome(service=Service('/usr/local/bin/chromedriver'),options=options)
+
+                    self._selenium_driver.set_page_load_timeout(10)  # ✅ Speed up by limiting page load time
+        return self._selenium_driver
 
     def fetch_page_data(self, url):
-        """Fetches metadata and heading count from a given URL."""
+        """Fetches metadata and heading count from a given URL, using Selenium as a fallback."""
         try:
             print(f"ℹ️ Fetching data for {url}...")
-            response = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            response = self.session.get(url, timeout=10)
+
+            if response.status_code == 404:
+                print(f"⚠️ 404 detected for {url}, switching to Selenium...")
+                return self._fetch_data_selenium(url)
+
             if response.status_code != 200:
                 print(f"⚠️ Skipping {url} - Status Code: {response.status_code}")
                 return None
 
-            soup = BeautifulSoup(response.text, "html.parser")
-            meta_title = soup.find("title").text if soup.find("title") else "N/A"
-            meta_description = soup.find("meta", attrs={"name": "description"})
-            meta_description = meta_description["content"] if meta_description else "N/A"
-
-            # Count heading tags excluding header/footer
-            headings = [h for h in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]) if not h.find_parent(["header", "footer"])]
-            heading_count = len(headings)
-
-            return {"url": url, "meta_title": meta_title, "meta_description": meta_description, "heading_count": heading_count}
+            return self._extract_metadata(response.text, url)
         except Exception as e:
             print(f"⚠️ Failed to fetch data for {url}: {e}")
             return None
 
-    def process_indexed_pages(self, max_workers=10):
-        """Processes only indexed URLs using multithreading and updates MongoDB with metadata."""
+    def _fetch_data_selenium(self, url):
+        """Fetches metadata using Selenium for JavaScript-heavy pages."""
+        try:
+            driver = self._get_selenium_driver()
+            driver.get(url)
+            soup = BeautifulSoup(driver.page_source, "html.parser")
+            return self._extract_metadata(str(soup), url)
+        except Exception as e:
+            print(f"⚠️ Selenium failed for {url}: {e}")
+            return None
+
+    def _extract_metadata(self, html, url):
+        """Extracts metadata and heading count from HTML content."""
+        soup = BeautifulSoup(html, "html.parser")
+        meta_title = soup.find("title").text if soup.find("title") else "N/A"
+        meta_description = soup.find("meta", attrs={"name": "description"})
+        meta_description = meta_description["content"] if meta_description else "N/A"
+
+        headings = [h for h in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]) if not h.find_parent(["header", "footer"])]
+        heading_count = len(headings)
+        print(f"✅ Fetched data for {url}!")
+        return {"url": url, "meta_title": meta_title, "meta_description": meta_description, "heading_count": heading_count}
+
+    def process_indexed_pages(self):
+        """Processes only indexed URLs using optimized multithreading and updates MongoDB with metadata."""
         indexed_pages = [url for url, status in self.scraped_urls.items() if status.get("status") == "indexed"]
         print(f"ℹ️ Processing {len(indexed_pages)} indexed pages...")
 
         extracted_data = []
+        max_workers = min(32, os.cpu_count() + 4)  # ✅ Dynamically adjust worker count based on CPU
 
-        # ✅ Use ThreadPoolExecutor for parallel requests
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_url = {executor.submit(self.fetch_page_data, url): url for url in indexed_pages}
-            
+
             for future in as_completed(future_to_url):
                 result = future.result()
                 if result:
                     extracted_data.append(result)
 
         print(f"✅ Metadata fetched for {len(extracted_data)} indexed pages!")
-        
+
         if extracted_data:
             self.db_handler.update_metadata(extracted_data)
             print(f"✅ Metadata updated for {len(extracted_data)} indexed pages!")
@@ -67,24 +114,20 @@ class ContentScraper:
         output = io.StringIO()
         writer = csv.writer(output)
 
-        # Fetch scraped data
         data = self.db_handler.fetch_scraped_urls()
-
-        # Determine all possible fields dynamically
-        all_keys = set()
-        for entry in data.values():
-            all_keys.update(entry.keys())
-
-        # Ensure URL and Status are always included
+        all_keys = {key for entry in data.values() for key in entry.keys()}
         all_keys.update(["status"])
-        all_keys = sorted(all_keys)  # Sort for consistency
+        all_keys = sorted(all_keys)
 
-        # Write CSV header
         writer.writerow(["URL"] + all_keys)
 
-        # Write CSV rows
         for url, entry in data.items():
             row = [url] + [entry.get(key, "N/A") for key in all_keys]
             writer.writerow(row)
 
-        return output.getvalue()  # Return CSV content as string
+        return output.getvalue()
+
+    def close(self):
+        """Closes the Selenium WebDriver."""
+        if self._selenium_driver:
+            self._selenium_driver.quit()
