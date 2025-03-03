@@ -12,6 +12,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 import threading
+from dotenv import load_dotenv
+load_dotenv()
 
 class ContentScraper:
     def __init__(self, domain, db_handler=None):
@@ -26,34 +28,26 @@ class ContentScraper:
         # ✅ Lazy initialize Selenium (only when needed)
         self.driver_lock = threading.Lock()
         self._selenium_driver = None  
+        # ✅ Set up Browserless API token (replace with your actual API token)
+        self.BROWSERLESS_API_TOKEN = os.getenv("BROWSERLESS_API_TOKEN")
+        self.BROWSERLESS_URL = f"https://chrome.browserless.io/webdriver"
 
     def _get_selenium_driver(self):
-        """Lazy initialization of Selenium WebDriver with Browserless authentication."""
+        """Lazy initialization of Selenium WebDriver."""
         if self._selenium_driver is None:
-            with self.driver_lock:
+            with self.driver_lock:  # Ensures only one instance is created
                 if self._selenium_driver is None:
-                    options = Options()
+                    options = webdriver.ChromeOptions()
+                    options.set_capability("browserless:token", self.BROWSERLESS_API_TOKEN)
                     options.add_argument("--headless")
                     options.add_argument("--disable-gpu")
                     options.add_argument("--no-sandbox")
                     options.add_argument("--disable-dev-shm-usage")
-                    options.add_argument("--blink-settings=imagesEnabled=false")
-
-                    # ✅ Retrieve Browserless credentials from environment variables
-                    browserless_url = os.environ.get("BROWSER_WEBDRIVER_ENDPOINT")
-                    browserless_token = os.environ.get("BROWSER_TOKEN")
-
-                    if not browserless_url or not browserless_token:
-                        raise ValueError("Browserless credentials are missing. Please check environment variables.")
-
-                    # ✅ Use HTTPS instead of WSS
-                    remote_url = f"{browserless_url}/webdriver?token={browserless_token}"
-
+                    options.add_argument("--blink-settings=imagesEnabled=false")  # ✅ Disable images for faster rendering
                     self._selenium_driver = webdriver.Remote(
-                        command_executor=remote_url,
+                        command_executor=self.BROWSERLESS_URL,
                         options=options
                     )
-
         return self._selenium_driver
 
     def fetch_page_data(self, url):
