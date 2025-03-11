@@ -6,12 +6,13 @@ from scraper.InternalLinkCrawler import InternalLinkCrawler
 from scraper.RobotsTxt import RobotsTxt
 from urllib.parse import urlparse
 import csv
+from scraper.utils.get_website_name import get_website_name
 class WebScraper:
     """Coordinates the entire scraping process."""
 
     def __init__(self, domain, db_handler=None, sitemap_scraper=None, link_crawler=None,robots_txt=None):
         self.domain = self.remove_trailing_slash(domain)
-        self.website_name = self.get_website_name()
+        self.website_name = get_website_name(domain)
 
         # Use dependency injection for flexibility and testing
         self.db_handler = db_handler or MongoDBHandler(self.website_name)
@@ -74,6 +75,10 @@ class WebScraper:
                 return True  # URL should be excluded
 
         return False  # URL is allowed  
+    def remove_backslash(self,url):
+        """Removes the trailing slash from a URL."""
+        return url[:-1] if url.endswith("/") else url
+    
     def get_all_urls_dict(self, sitemap_urls, internal_urls):
         """Combines sitemap and internal URLs into a single dictionary, ensuring proper indexing status."""
         all_urls = {}
@@ -90,6 +95,7 @@ class WebScraper:
 
         # Mark internal URLs as non-indexed only if they are not already indexed
         for url in internal_urls:
+            url=self.remove_backslash(url)
             if url not in all_urls:
                 all_urls[url] = "non-indexed"
 

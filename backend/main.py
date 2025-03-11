@@ -31,21 +31,34 @@ class WebScraperAPI:
 
         @self.app.post("/scrape/")
         def scrape_website(domain: str):
-            """Creates a WebScraper instance and stores it."""
+            # Create WebScraper only if not already existing
             if domain not in self.scrapers:
-                self.scrapers[domain] = WebScraper(domain)  # Store scraper instance
+                self.scrapers[domain] = WebScraper(domain)
 
+            # Now run the scrape
             scraper = self.scrapers[domain]
             scraper.process_website()
             return {"message": f"Scraping started for {domain}"}
+
         
         @self.app.post("/scrape-content/")
         def scrape_content(domain: str):
-            """Creates a ContentScraper instance and stores it."""
+            """
+            1) Make sure there's a WebScraper for the domain.
+            2) Pass its db_handler into ContentScraper.
+            3) Let ContentScraper process.
+            """
+            if domain not in self.scrapers:
+                return {"error": f"No WebScraper found for {domain}; run /scrape/ first."}
+
+            # If we haven't created a ContentScraper yet, do it now
             if domain not in self.content_scrapers:
-                self.content_scrapers[domain] = ContentScraper(domain)
+                db_handler = self.scrapers[domain].db_handler
+                self.content_scrapers[domain] = ContentScraper(domain, db_handler=db_handler)
+
             content_scraper = self.content_scrapers[domain]
             content_scraper.process_indexed_pages()
+            return {"message": f"Content scraping started for {domain}"}
             
         @self.app.get("/website-name/")
         def get_website_name(domain: str):
@@ -54,10 +67,12 @@ class WebScraperAPI:
 
         @self.app.get("/scraped-urls/")
         def get_scraped_urls(domain: str):
-            """Retrieves scraped URLs from MongoDB."""
+            """
+            Return scraped URLs for a domain using the ContentScraper's db_handler.
+            """
             if domain not in self.content_scrapers:
-                return {"error": "Domain not found. Run /scrape/ first."}
-            
+                return {"error": "Domain not found in content scrapers. Run /scrape-content/ first."}
+
             content_scraper = self.content_scrapers[domain]
             urls = content_scraper.db_handler.fetch_scraped_urls()
             return {"scraped_urls": urls}
