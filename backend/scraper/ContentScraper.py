@@ -7,8 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+from scraper.utils.get_website_name import get_website_name
 
-# Set up logging
+# logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
@@ -18,8 +19,8 @@ logger = logging.getLogger(__name__)
 class ContentScraper:
     def __init__(self, domain, db_handler=None):
         self.domain = domain
-        self.website_name = self._get_website_name(domain)
-        self.db_handler = db_handler  # Typically your MongoDBHandler instance
+        self.website_name = get_website_name(domain)
+        self.db_handler = db_handler  
         self._playwright = None
         self.driver_lock = threading.Lock()
 
@@ -29,13 +30,6 @@ class ContentScraper:
         self.repeated_block_signatures = set()
         
         logger.info(f"Initialized ContentScraper for domain: {domain}")
-
-    def _get_website_name(self, domain):
-        """Example utility mirroring your get_website_name."""
-        parsed_url = urlparse(domain)
-        hostname = parsed_url.hostname or domain.replace("https://", "").replace("http://", "")
-        parts = hostname.split(".")
-        return parts[1] if parts[0] == "www" and len(parts) > 1 else parts[0]
 
     def _get_playwright_browser(self):
         """Lazy initialization of Playwright Browser."""
@@ -58,7 +52,7 @@ class ContentScraper:
                 browser = p.chromium.launch(headless=True)
                 context = browser.new_context()
                 page = context.new_page()
-                page.goto(url, timeout=0)  # 20 seconds
+                page.goto(url, timeout=0)  
                 page.wait_for_load_state("domcontentloaded")
                 html = page.content()
                 page.close()
@@ -81,8 +75,6 @@ class ContentScraper:
         """
         Extracts meta title, meta description, heading count,
         and internal links from the pruned DOM soup.
-        Skips anchor-only links (#...), mailto:, tel:, etc.
-        and only collects links that share self.domain.
         """
         # Meta Title
         title_tag = soup.find("title")
@@ -135,7 +127,7 @@ class ContentScraper:
             "meta_description": meta_description,
             "heading_count": heading_count,
             "internal_link_count": internal_link_count,
-            "internal_links": internal_links,  # full list of internal link URLs
+            "internal_links": internal_links, 
         }
 
 
@@ -216,17 +208,15 @@ class ContentScraper:
             self.browser.close()
             self._playwright.stop()
 
-    # --------------------------------------------------------------------------
-    #                     HELPER METHODS (newly added)
-    # --------------------------------------------------------------------------
+
     def _detect_repeated_subtrees(self, sample_pages):
         """
         Simple repeated-block detection.
         1) For each page in sample, parse the top-level DOM structure.
         2) Compute signatures for direct child blocks of <body>.
         3) Count how often each signature appears.
-        4) If a block appears in >= X% of pages, consider it repeated.
-           (X is adjustable, e.g., 70% or 80%).
+        4) If a block appears in = 100% of pages, consider it repeated.
+    
         """
         
         logger.info("[_detect_repeated_subtrees] Detecting repeated blocks from sample pages.")
@@ -259,8 +249,7 @@ class ContentScraper:
             except Exception as e:
                 logger.warning(f"[_detect_repeated_subtrees] Error sampling {url}: {e}")
 
-        # Now decide which blocks are "repeated" using a threshold
-        threshold = int(len(sample_pages) * 0.7)  # e.g., 70% of sample pages
+        threshold = int(len(sample_pages) * 1)  # 100% of sample pages
         for sig, count in block_counts.items():
             if count >= threshold:
                 self.repeated_block_signatures.add(sig)
@@ -274,14 +263,13 @@ class ContentScraper:
          - immediate child structure
          - textual or link density cues
          - any semantic cues in class/id names
-        More advanced methods would do a deeper subtree hash.
         """
         tag_name = element.name
         child_tags = [child.name for child in element.find_all(recursive=False)]
         class_names = element.get("class", [])
         id_name = element.get("id", "")
 
-        # Some optional heuristics: link density
+        # Some heuristics: link density
         links = element.find_all("a")
         link_count = len(links)
         text_length = len(element.get_text(strip=True))
