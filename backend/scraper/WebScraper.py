@@ -88,6 +88,7 @@ class WebScraper:
 
         # Mark sitemap URLs as indexed, but verify with robots.txt
         for url in sitemap_urls:
+            url=self.remove_backslash(url)
             if self.is_disallowed(url, exclude_paths):
                 all_urls[url] = "non-indexed"
             else:
